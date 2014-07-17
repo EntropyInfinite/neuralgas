@@ -298,10 +298,10 @@ end
     [sdistances, indices] = findNodeDistances(nodes);
     mergedWith = zeros(1,NumOfNodes);
     for in=1:NumOfNodes
-        if mergedWith(in)>0
+        if mergedWith(in)~=0
             continue;
         end
-        if in == indices(indices(in,2),2)
+        if (in == indices(indices(in,2),2))&&(node_classes(in)==node_classes(indices(indices(in,2),2)))
             mergedWith(in) = indices(in,2);
             mergedWith(indices(in,2)) = in;
         else
