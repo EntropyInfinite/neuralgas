@@ -234,7 +234,7 @@ for kk=1:NumOfEpochs
     %% Step 7. Dead Node Removal Procedure. 
     ii = 1;
     while NumOfNodes >= ii
-        if any(edges(ii,:)) == 0
+        if (any(edges(ii,:)) == 0) || (any(edges(ii,:)<0))
 
             edges = [edges(1:ii-1,:); edges(ii+1:NumOfNodes,:);];
             edges = [edges(:,1:ii-1)  edges(:,ii+1:NumOfNodes);];
