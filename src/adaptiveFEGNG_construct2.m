@@ -293,72 +293,72 @@ for kk=1:NumOfEpochs
 %      M(kk)=getframe(gcf);
 end
 
-    %% Merging epoch
-    % Determine which nodes to merge
-    [sdistances, indices] = findNodeDistances(nodes);
-    mergedWith = zeros(1,NumOfNodes);
-    for in=1:NumOfNodes
-        if mergedWith(in)~=0
-            continue;
-        end
-        if (in == indices(indices(in,2),2))&&(node_classes(in)==node_classes(indices(indices(in,2),2)))
-            mergedWith(in) = indices(in,2);
-            mergedWith(indices(in,2)) = in;
-        else
-            mergedWith(in) = -1;
-        end
-    end
-    % Actually perform merging.
-    for index1=1:NumOfNodes
-        if mergedWith(index1)<0
-            continue;
-        end
-        index2 = mergedWith(index1);
-        if index2<index1
-            continue;
-        end
-        nodes = [nodes (nodes(:,index1)+nodes(:,index2))./2];
-        edges = [edges  edges(:,index1)|edges(:,index2)];
-        edges = [edges; edges(index1,:)|edges(index2,:)];
-        ages = [ages  min(ages(:,index1),ages(:,index2))];
-        ages = [ages; min(ages(index1,:),ages(index2,:))];
-        fixed_nodes = [fixed_nodes 0];
-        %problem here
-        if node_classes(index1)==node_classes(index2)
-            node_classes = [node_classes node_classes(index1)];
-            point_coverages = [point_coverages point_coverages(index1)+point_coverages(index2)];
-        else
-            node_classes = [node_classes -1];
-            point_coverages = [point_coverages min(point_coverages(index2), point_coverages(index1))];
-        end
-        node_lambdas = [node_lambdas norm(nodes(index1)-nodes(index2))/2];
-        mergedWith = [mergedWith -1];
-        %remove old nodes
-    end
-    NumOfNodes = size(nodes,2);
-    ii = 1;
-    while NumOfNodes >= ii
-        if mergedWith(ii)>0 
-
-            edges = [edges(1:ii-1,:); edges(ii+1:NumOfNodes,:);];
-            edges = [edges(:,1:ii-1)  edges(:,ii+1:NumOfNodes);];
-
-            ages = [ages(1:ii-1,:); ages(ii+1:NumOfNodes,:);];
-            ages = [ages(:,1:ii-1)  ages(:,ii+1:NumOfNodes);];
-
-            nodes = [nodes(:,1:ii-1) nodes(:,ii+1:NumOfNodes);];
-            fixed_nodes = [fixed_nodes(1,1:ii-1) fixed_nodes(1,ii+1:NumOfNodes);];
-            node_classes = [node_classes(1,1:ii-1) node_classes(1,ii+1:NumOfNodes);];
-            node_lambdas = [node_lambdas(1,1:ii-1) node_lambdas(1,ii+1:NumOfNodes);];
-            point_coverages = [point_coverages(1,1:ii-1) point_coverages(1,ii+1:NumOfNodes);];
-            mergedWith = [mergedWith(:,1:ii-1) mergedWith(:,ii+1:NumOfNodes);];
-
-            NumOfNodes = NumOfNodes - 1;
-
-            ii = ii-1; 
-        end
-        ii = ii+1;
-    end           
+%     %% Merging epoch
+%     % Determine which nodes to merge
+%     [sdistances, indices] = findNodeDistances(nodes);
+%     mergedWith = zeros(1,NumOfNodes);
+%     for in=1:NumOfNodes
+%         if mergedWith(in)~=0
+%             continue;
+%         end
+%         if (in == indices(indices(in,2),2))&&(node_classes(in)==node_classes(indices(indices(in,2),2)))
+%             mergedWith(in) = indices(in,2);
+%             mergedWith(indices(in,2)) = in;
+%         else
+%             mergedWith(in) = -1;
+%         end
+%     end
+%     % Actually perform merging.
+%     for index1=1:NumOfNodes
+%         if mergedWith(index1)<0
+%             continue;
+%         end
+%         index2 = mergedWith(index1);
+%         if index2<index1
+%             continue;
+%         end
+%         nodes = [nodes (nodes(:,index1)+nodes(:,index2))./2];
+%         edges = [edges  edges(:,index1)|edges(:,index2)];
+%         edges = [edges; edges(index1,:)|edges(index2,:)];
+%         ages = [ages  min(ages(:,index1),ages(:,index2))];
+%         ages = [ages; min(ages(index1,:),ages(index2,:))];
+%         fixed_nodes = [fixed_nodes 0];
+%         %problem here
+%         if node_classes(index1)==node_classes(index2)
+%             node_classes = [node_classes node_classes(index1)];
+%             point_coverages = [point_coverages point_coverages(index1)+point_coverages(index2)];
+%         else
+%             node_classes = [node_classes -1];
+%             point_coverages = [point_coverages min(point_coverages(index2), point_coverages(index1))];
+%         end
+%         node_lambdas = [node_lambdas norm(nodes(index1)-nodes(index2))/2];
+%         mergedWith = [mergedWith -1];
+%         %remove old nodes
+%     end
+%     NumOfNodes = size(nodes,2);
+%     ii = 1;
+%     while NumOfNodes >= ii
+%         if mergedWith(ii)>0 
+% 
+%             edges = [edges(1:ii-1,:); edges(ii+1:NumOfNodes,:);];
+%             edges = [edges(:,1:ii-1)  edges(:,ii+1:NumOfNodes);];
+% 
+%             ages = [ages(1:ii-1,:); ages(ii+1:NumOfNodes,:);];
+%             ages = [ages(:,1:ii-1)  ages(:,ii+1:NumOfNodes);];
+% 
+%             nodes = [nodes(:,1:ii-1) nodes(:,ii+1:NumOfNodes);];
+%             fixed_nodes = [fixed_nodes(1,1:ii-1) fixed_nodes(1,ii+1:NumOfNodes);];
+%             node_classes = [node_classes(1,1:ii-1) node_classes(1,ii+1:NumOfNodes);];
+%             node_lambdas = [node_lambdas(1,1:ii-1) node_lambdas(1,ii+1:NumOfNodes);];
+%             point_coverages = [point_coverages(1,1:ii-1) point_coverages(1,ii+1:NumOfNodes);];
+%             mergedWith = [mergedWith(:,1:ii-1) mergedWith(:,ii+1:NumOfNodes);];
+% 
+%             NumOfNodes = NumOfNodes - 1;
+% 
+%             ii = ii-1; 
+%         end
+%         ii = ii+1;
+%     end           
    
     %% Check convergence
     if size(nodes,2)>= NumOfEpochs*NumOfSamples
