@@ -192,7 +192,6 @@ for kk=1:NumOfEpochs
                 fixed_nodes = [fixed_nodes 1];
                 point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
                 node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
-                %mergedWith = [mergedWith -1];
                 edges(s1,s2) = -1;
                 edges(s2,s1) = -1;
             end
