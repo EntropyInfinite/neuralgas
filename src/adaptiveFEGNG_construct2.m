@@ -181,7 +181,23 @@ for kk=1:NumOfEpochs
                 ages(s2,s1) = 0;
                 point_coverages(1,s1)=point_coverages(1,s1)+1;
             %end
+            
+            %try and merge second winner
+            if (norm(nodes(:,s2)-Input) < node_lambdas(1, s2)) && (node_classes(s1)==node_classes(s2))
+                nodes = [nodes (nodes(:,s1)+nodes(:,s2))./2];
+                edges = [edges  edges(:,s1)|edges(:,s2)];
+                edges = [edges; edges(s1,:)|edges(s2,:)];
+                ages = [ages  min(ages(:,s1),ages(:,s2))];
+                ages = [ages; min(ages(s1,:),ages(s2,:))];
+                fixed_nodes = [fixed_nodes 1];
+                point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
+                node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
+                %mergedWith = [mergedWith -1];
+                edges(s1,s2) = -1;
+                edges(s2,s1) = -1;
+            end
         end
+        
     else
         nodes(:,s1) = nodes(:,s1) + eb*(Input-nodes(:,s1));
         nodes(:,s1_Neighbors) = nodes(:,s1_Neighbors) + en*(repmat(Input,[1 SizeOfNeighborhood])-nodes(:,s1_Neighbors));
