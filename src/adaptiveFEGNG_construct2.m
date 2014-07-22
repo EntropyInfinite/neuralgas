@@ -92,9 +92,11 @@ ages = [ NaN  0;
 % scrsz = get(0,'ScreenSize');
 % figure('Position',[scrsz(3)/2 scrsz(4)/3-50 scrsz(3)/2 2*scrsz(4)/3])
 %startvalue = 3;
+ecount=0;
 tic
 while ~all(fixed_nodes)
-    if toc>90
+    ecount = ecount+1;
+    if toc>300
         %dbstop in construct_fastEGNG_classifier2 at 93;
         tic;
         failed = 1;
@@ -183,7 +185,7 @@ for kk=1:NumOfEpochs
             %end
             
             %try and merge second winner
-            if (norm(nodes(:,s2)-Input) < node_lambdas(1, s2)) && (node_classes(s1)==node_classes(s2))
+            if (norm(nodes(:,s1)-nodes(:,s2)) < node_lambdas(s1)+node_lambdas(s2)) && ((node_classes(s1)==node_classes(s2)) || (node_classes(s2)<0) )
                 nodes = [nodes (nodes(:,s1)+nodes(:,s2))./2];
                 edges = [edges  edges(:,s1)|edges(:,s2)];
                 edges = [edges; edges(s1,:)|edges(s2,:)];
@@ -192,8 +194,10 @@ for kk=1:NumOfEpochs
                 fixed_nodes = [fixed_nodes 1];
                 point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
                 node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
-                edges(s1,s2) = -1;
-                edges(s2,s1) = -1;
+                node_classes = [node_classes node_classes(s1)];
+                NumOfNodes = NumOfNodes+1;
+                edges(s1,s1) = -1;
+                edges(s2,s2) = -1;
             end
         end
         
@@ -205,11 +209,26 @@ for kk=1:NumOfEpochs
         edges(s2,s1) = 1;
         ages(s1,s2) = 0;
         ages(s2,s1) = 0;
-
+        
         if norm(nodes(:,s1)-Input) <= node_lambdas(1, s1)
             fixed_nodes(1,s1) = 1;
             point_coverages(1,s1)=point_coverages(1,s1)+1;
             node_classes(1,s1) = classLabels(1,n);
+        else
+            if norm(nodes(:,s1)-nodes(:,s2)) < node_lambdas(s1)+node_lambdas(s2)
+                nodes = [nodes (nodes(:,s1)+nodes(:,s2))./2];
+                edges = [edges  edges(:,s1)|edges(:,s2)];
+                edges = [edges; edges(s1,:)|edges(s2,:)];
+                ages = [ages  min(ages(:,s1),ages(:,s2))];
+                ages = [ages; min(ages(s1,:),ages(s2,:))];
+                fixed_nodes = [fixed_nodes -1];
+                point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
+                node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
+                node_classes = [node_classes -1];
+                NumOfNodes = NumOfNodes+1;
+                edges(s1,s1) = -1;
+                edges(s2,s2) = -1;
+            end
         end
     end
 
@@ -256,8 +275,10 @@ for kk=1:NumOfEpochs
     %[nodes, edges, ages, fixed_nodes, node_classes] = removeUnconnectedF(nodes, edges,ages,fixed_nodes,node_classes);
     %%
     end
-
-    
+    hold on;
+    plot(ecount, NumOfNodes, ecount, sum(fixed_nodes>0));
+    %plot(ecount, sum(fixed_nodes<=0)/NumOfNodes);
+    drawnow;
 
      %% Refresh drawing buffers
 %     NumOfNodes = size(nodes,2);
