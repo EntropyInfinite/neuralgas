@@ -91,9 +91,11 @@ ages = [ NaN  0;
 
 % scrsz = get(0,'ScreenSize');
 % figure('Position',[scrsz(3)/2 scrsz(4)/3-50 scrsz(3)/2 2*scrsz(4)/3])
+ecount = 0;
 tic
 while ~all(fixed_nodes)
-    if toc>60
+    ecount = ecount+1;
+    if toc>90
         %dbstop in construct_fastEGNG_classifier2 at 93;
         tic;
         failed = 1;
@@ -240,7 +242,10 @@ for kk=1:NumOfEpochs
     %[nodes, edges, ages, fixed_nodes, node_classes] = removeUnconnectedF(nodes, edges,ages,fixed_nodes,node_classes);
     %%
     end
-
+    hold on;
+    plot(ecount, NumOfNodes, ecount, sum(fixed_nodes>0));
+    %plot(ecount, sum(fixed_nodes<=0)/NumOfNodes);
+    drawnow;
     
 
      %% Refresh drawing buffers
