@@ -24,7 +24,7 @@ end
 %clc;
 %clear;
 close all;
-colordef black
+%colordef black
 %NumOfEpochs   = 600;
 %NumOfSamples = 400;
 age_inc               = 1;
@@ -93,6 +93,7 @@ ages = [ NaN  0;
 % figure('Position',[scrsz(3)/2 scrsz(4)/3-50 scrsz(3)/2 2*scrsz(4)/3])
 %startvalue = 3;
 ecount=0;
+plotArray = [2; 0]; %prev point for node count graph
 tic
 while ~all(fixed_nodes)
     ecount = ecount+1;
@@ -275,9 +276,10 @@ for kk=1:NumOfEpochs
     %[nodes, edges, ages, fixed_nodes, node_classes] = removeUnconnectedF(nodes, edges,ages,fixed_nodes,node_classes);
     %%
     end
-    hold on;
-    plot(ecount, NumOfNodes, ecount, sum(fixed_nodes>0));
-    %plot(ecount, sum(fixed_nodes<=0)/NumOfNodes);
+    %hold on;
+    plotArray = [plotArray [NumOfNodes; sum(fixed_nodes>0)]];
+    %plot(0:ecount, plotArray(1,:), 0:ecount, plotArray(2,:));
+    plot(0:ecount, 1-plotArray(2,:)./plotArray(1,:));
     drawnow;
 
      %% Refresh drawing buffers
