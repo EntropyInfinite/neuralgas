@@ -1,4 +1,4 @@
-function [ nodes, edges, node_classes, node_lambdas, point_coverages, failed ] = adaptiveFEGNG_construct2( Data, classLabels, NumOfEpochs, NumOfSamples)
+function [ fgng, failed ] = adaptiveFEGNG_construct2_2015( Data, classLabels, NumOfEpochs, NumOfSamples)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
  % Unsupervised Self Organizing Map. Growing Neural Gas (GNG) Algorithm.
@@ -24,7 +24,7 @@ end
 %clc;
 %clear;
 close all;
-%colordef black
+colordef white
 %NumOfEpochs   = 600;
 %NumOfSamples = 400;
 age_inc               = 1;
@@ -32,7 +32,7 @@ max_age             = 100;
 max_nodes         = 300;
 eb                         = .05;
 en                         = .005;
-lambda                   = 0.1; %temporary value
+lambda                   = 0.3; %temporary value
 alpha                    = .5;     % q and f units err reduction constant.
 d                           = .99;   % err reduction factor.
 %RMSE                  = zeros(1,NumOfEpochs);
@@ -65,21 +65,22 @@ d                           = .99;   % err reduction factor.
 
 % Step.0 Start with two neural units (nodes) selected from input data:
 NumOfNodes = 2;
-ClassIdents = unique(classLabels);
-NumOfClasses = numel(ClassIdents);
+%ClassIdents = unique(classLabels);
+%NumOfClasses = numel(ClassIdents);
 % SecondNodeIndex = find(classLabels~=classLabels(1,1),1);
 % nodes = [Data(:,1)  Data(:,SecondNodeIndex)];
-nodes = [Data(:,1)  Data(:,2)];
+fgng.nodes = [Data(:,1)  Data(:,2)];
 %classfreqs = [zeros(NumOfClasses,1) zeros(NumOfClasses,1)];
-%lambda = norm(nodes(1)-nodes(2))/2;
-node_lambdas = [lambda lambda];
-point_coverages = [1 1];
-node_classes = [-1 -1];
-fixed_nodes = uint8([0 0]);
+%lambda = 2;
+%lambda = norm(fgng.nodes(1)-fgng.nodes(2))/2;
+fgng.node_lambdas = [lambda lambda];
+fgng.point_coverages = [1 1];
+fgng.node_classes = [-1 -1];
+fgng.fixed_nodes = uint8([0 0]);
 failed = 0;
 
 % Initial connections (edges) matrix.
-edges = [0  1;
+fgng.edges = [0  1;
                 1  0;];
      
 % Initial ages matrix.
@@ -89,22 +90,25 @@ ages = [ NaN  0;
 % Initial err Vector.
 % err = [0 0];
 
+Cur_NumOfNodes = 0;
+Epoch = 0;
+
 % scrsz = get(0,'ScreenSize');
 % figure('Position',[scrsz(3)/2 scrsz(4)/3-50 scrsz(3)/2 2*scrsz(4)/3])
-%startvalue = 3;
-ecount=0;
+ecount = 0;
 plotArray = [2; 0]; %prev point for node count graph
 tic
-while ~all(fixed_nodes)
+n = 3;
+while ~all(fgng.fixed_nodes)
     ecount = ecount+1;
-    if toc>300
-        %dbstop in construct_fastEGNG_classifier2 at 93;
-        tic;
-        failed = 1;
-        return
-    end
+%     if toc>90
+%         %dbstop in construct_fastEGNG_classifier2 at 93;
+%         tic;
+%         failed = 1;
+%         return
+%     end
 for kk=1:NumOfEpochs
-    point_coverages = ones(1,NumOfNodes);
+    fgng.point_coverages = ones(1,NumOfNodes);
     
     % Choose the next Input Training Vectors.
     nextblock = (kk-1)*NumOfSamples+1:1:kk*NumOfSamples;
@@ -112,21 +116,22 @@ for kk=1:NumOfEpochs
     
     %set initial lambda
 
-    for n=1:NumOfSamples
+    for n=n:NumOfSamples
 
-    % Step.1 Generate an input signal î according to P(î).
+    % Step.1 Generate an input signal ï¿½ according to P(ï¿½).
     %params(9) = n;
     Input = In(:,n);
 
     %% Step 2. Find the two nearest units s1 and s2 to the new data sample.
-    [s1 s2 distances] = findTwoNearest(Input,nodes);
-    %params(10) = s1;
-    %params(11) = s2;
+    %n
+    [s1, s2] = findTwoNearest(Input,fgng.nodes);
+    params(10) = s1;
+    params(11) = s2;
 
     %% Steps 3-6. Increment the age of all edges emanating from s1 .
     
         % Step 3. Increment the age of all edges emanating from s1. 
-    s1_Neighbors = find(edges(:,s1)==1);
+    s1_Neighbors = find(fgng.edges(:,s1)==1);
     SizeOfNeighborhood = length(s1_Neighbors);
 
     ages(s1_Neighbors,s1) = ages(s1_Neighbors,s1) + age_inc;
@@ -135,29 +140,29 @@ for kk=1:NumOfEpochs
     % Step 4. Add the squared distance to a local error counter variable:
     %error(s1) = error(s1) + distances(s1)^2;
 
-    % Step 5. Move s1 and its topological neighbors towards î.
-    ndist = norm(nodes(:,s1)-Input);
-    if fixed_nodes(1,s1) == 1
-        if ndist > node_lambdas(1, s1)
+    % Step 5. Move s1 and its topological neighbors towards ï¿½.
+    ndist = norm(fgng.nodes(:,s1)-Input);
+    if fgng.fixed_nodes(1,s1) == 1
+        if ndist > fgng.node_lambdas(1, s1)
                  % Add the new node at target input point: 
-               nodes = [nodes Input];
+               fgng.nodes = [fgng.nodes Input];
 
                NumOfNodes = NumOfNodes+1;
                r = NumOfNodes;
 
                % Insert edges connecting the new unit r with units q anf f. 
-               edges = [edges  zeros(NumOfNodes-1,1)];
-               edges = [edges; zeros(1,NumOfNodes)];
-               edges(s1,r) = 1;
-               edges(r,s1) = 1;
+               fgng.edges = [fgng.edges  zeros(NumOfNodes-1,1)];
+               fgng.edges = [fgng.edges; zeros(1,NumOfNodes)];
+               fgng.edges(s1,r) = 1;
+               fgng.edges(r,s1) = 1;
                ages = [ages  NaN*ones(NumOfNodes-1,1)];
                ages = [ages; NaN*ones(1,NumOfNodes)];
                ages(s1,r) = 0;
                ages(r,s1) = 0;
-               fixed_nodes = [fixed_nodes 0];
-               node_classes = [node_classes -1];
-               node_lambdas = [node_lambdas lambda];
-               point_coverages = [point_coverages 1];
+               fgng.fixed_nodes = [fgng.fixed_nodes 0];
+               fgng.node_classes = [fgng.node_classes -1];
+               fgng.node_lambdas = [fgng.node_lambdas lambda];
+               fgng.point_coverages = [fgng.point_coverages 1];
         else
 %             if classLabels(1,n)~=node_classes(1,s1)
 %                 nodes = [nodes Input];
@@ -178,57 +183,57 @@ for kk=1:NumOfEpochs
 %                 point_coverages = [point_coverages 1];
 %                 point_coverages(1,s1) = point_coverages(1,s1)-1;
             %else
-                edges(s1,s2) = 1;
-                edges(s2,s1) = 1;
+                fgng.edges(s1,s2) = 1;
+                fgng.edges(s2,s1) = 1;
                 ages(s1,s2) = 0;
                 ages(s2,s1) = 0;
-                point_coverages(1,s1)=point_coverages(1,s1)+1;
+                fgng.point_coverages(1,s1) = fgng.point_coverages(1,s1)+1;
             %end
             
-            %try and merge second winner
-            if (norm(nodes(:,s1)-nodes(:,s2)) < node_lambdas(s1)+node_lambdas(s2)) && ((node_classes(s1)==node_classes(s2)) || (node_classes(s2)<0) )
-                nodes = [nodes (nodes(:,s1)+nodes(:,s2))./2];
-                edges = [edges  edges(:,s1)|edges(:,s2)];
-                edges = [edges; edges(s1,:)|edges(s2,:)];
+          %  try and merge second winner
+            if (norm(fgng.nodes(:,s1)-fgng.nodes(:,s2)) < fgng.node_lambdas(s1)+fgng.node_lambdas(s2)) && ((fgng.node_classes(s1)==fgng.node_classes(s2)) || (fgng.node_classes(s2)<0) )
+                fgng.nodes = [fgng.nodes (fgng.nodes(:,s1)+fgng.nodes(:,s2))./2];
+                fgng.edges = [fgng.edges  fgng.edges(:,s1)|fgng.edges(:,s2)];
+                fgng.edges = [fgng.edges; fgng.edges(s1,:)|fgng.edges(s2,:)];
                 ages = [ages  min(ages(:,s1),ages(:,s2))];
                 ages = [ages; min(ages(s1,:),ages(s2,:))];
-                fixed_nodes = [fixed_nodes 1];
-                point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
-                node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
-                node_classes = [node_classes node_classes(s1)];
+                fgng.fixed_nodes = [fgng.fixed_nodes 1];
+                fgng.point_coverages = [fgng.point_coverages fgng.point_coverages(s1)+fgng.point_coverages(s2)];
+                fgng.node_lambdas = [fgng.node_lambdas norm(fgng.nodes(:,s1)-fgng.nodes(:,s2))/2+max(fgng.node_lambdas(s1), fgng.node_lambdas(s2))];
+                fgng.node_classes = [fgng.node_classes fgng.node_classes(s1)];
                 NumOfNodes = NumOfNodes+1;
-                edges(s1,s1) = -1;
-                edges(s2,s2) = -1;
+                fgng.edges(s1,s1) = -1;
+                fgng.edges(s2,s2) = -1;
             end
         end
         
     else
-        nodes(:,s1) = nodes(:,s1) + eb*(Input-nodes(:,s1));
-        nodes(:,s1_Neighbors) = nodes(:,s1_Neighbors) + en*(repmat(Input,[1 SizeOfNeighborhood])-nodes(:,s1_Neighbors));
+        fgng.nodes(:,s1) = fgng.nodes(:,s1) + eb*(Input-fgng.nodes(:,s1));
+        fgng.nodes(:,s1_Neighbors) = fgng.nodes(:,s1_Neighbors) + en*(repmat(Input,[1 SizeOfNeighborhood])-fgng.nodes(:,s1_Neighbors));
 
-        edges(s1,s2) = 1;
-        edges(s2,s1) = 1;
+        fgng.edges(s1,s2) = 1;
+        fgng.edges(s2,s1) = 1;
         ages(s1,s2) = 0;
         ages(s2,s1) = 0;
         
-        if norm(nodes(:,s1)-Input) <= node_lambdas(1, s1)
-            fixed_nodes(1,s1) = 1;
-            point_coverages(1,s1)=point_coverages(1,s1)+1;
-            node_classes(1,s1) = classLabels(1,n);
+        if norm(fgng.nodes(:,s1)-Input) <= fgng.node_lambdas(1, s1)
+            fgng.fixed_nodes(1,s1) = 1;
+            fgng.point_coverages(1,s1)=fgng.point_coverages(1,s1)+1;
+            fgng.node_classes(1,s1) = classLabels(1,n);
         else
-            if norm(nodes(:,s1)-nodes(:,s2)) < node_lambdas(s1)+node_lambdas(s2)
-                nodes = [nodes (nodes(:,s1)+nodes(:,s2))./2];
-                edges = [edges  edges(:,s1)|edges(:,s2)];
-                edges = [edges; edges(s1,:)|edges(s2,:)];
+            if norm(fgng.nodes(:,s1)-fgng.nodes(:,s2)) < fgng.node_lambdas(s1)+fgng.node_lambdas(s2)
+                fgng.nodes = [fgng.nodes (fgng.nodes(:,s1)+fgng.nodes(:,s2))./2];
+                fgng.edges = [fgng.edges  fgng.edges(:,s1)|fgng.edges(:,s2)];
+                fgng.edges = [fgng.edges; fgng.edges(s1,:)|fgng.edges(s2,:)];
                 ages = [ages  min(ages(:,s1),ages(:,s2))];
                 ages = [ages; min(ages(s1,:),ages(s2,:))];
-                fixed_nodes = [fixed_nodes -1];
-                point_coverages = [point_coverages point_coverages(s1)+point_coverages(s2)];
-                node_lambdas = [node_lambdas norm(nodes(:,s1)-nodes(:,s2))/2+max(node_lambdas(s1), node_lambdas(s2))];
-                node_classes = [node_classes -1];
+                fgng.fixed_nodes = [fgng.fixed_nodes -1];
+                fgng.point_coverages = [fgng.point_coverages fgng.point_coverages(s1)+fgng.point_coverages(s2)];
+                fgng.node_lambdas = [fgng.node_lambdas norm(fgng.nodes(:,s1)-fgng.nodes(:,s2))/2+max(fgng.node_lambdas(s1), fgng.node_lambdas(s2))];
+                fgng.node_classes = [fgng.node_classes -1];
                 NumOfNodes = NumOfNodes+1;
-                edges(s1,s1) = -1;
-                edges(s2,s2) = -1;
+                fgng.edges(s1,s1) = -1;
+                fgng.edges(s2,s2) = -1;
             end
         end
     end
@@ -253,19 +258,19 @@ for kk=1:NumOfEpochs
     %% Step 7. Dead Node Removal Procedure. 
     ii = 1;
     while NumOfNodes >= ii
-        if (any(edges(ii,:)) == 0) || (any(edges(ii,:)<0))
+        if (any(fgng.edges(ii,:)) == 0) || (any(fgng.edges(ii,:)<0))
 
-            edges = [edges(1:ii-1,:); edges(ii+1:NumOfNodes,:);];
-            edges = [edges(:,1:ii-1)  edges(:,ii+1:NumOfNodes);];
+            fgng.edges = [fgng.edges(1:ii-1,:); fgng.edges(ii+1:NumOfNodes,:);];
+            fgng.edges = [fgng.edges(:,1:ii-1)  fgng.edges(:,ii+1:NumOfNodes);];
 
             ages = [ages(1:ii-1,:); ages(ii+1:NumOfNodes,:);];
             ages = [ages(:,1:ii-1)  ages(:,ii+1:NumOfNodes);];
 
-            nodes = [nodes(:,1:ii-1) nodes(:,ii+1:NumOfNodes);];
-            fixed_nodes = [fixed_nodes(1,1:ii-1) fixed_nodes(1,ii+1:NumOfNodes);];
-            node_classes = [node_classes(1,1:ii-1) node_classes(1,ii+1:NumOfNodes);];
-            node_lambdas = [node_lambdas(1,1:ii-1) node_lambdas(1,ii+1:NumOfNodes);];
-            point_coverages = [point_coverages(1,1:ii-1) point_coverages(1,ii+1:NumOfNodes);];
+            fgng.nodes = [fgng.nodes(:,1:ii-1) fgng.nodes(:,ii+1:NumOfNodes);];
+            fgng.fixed_nodes = [fgng.fixed_nodes(1,1:ii-1) fgng.fixed_nodes(1,ii+1:NumOfNodes);];
+            fgng.node_classes = [fgng.node_classes(1,1:ii-1) fgng.node_classes(1,ii+1:NumOfNodes);];
+            fgng.node_lambdas = [fgng.node_lambdas(1,1:ii-1) fgng.node_lambdas(1,ii+1:NumOfNodes);];
+            fgng.point_coverages = [fgng.point_coverages(1,1:ii-1) fgng.point_coverages(1,ii+1:NumOfNodes);];
 
             NumOfNodes = NumOfNodes - 1;
 
@@ -276,8 +281,9 @@ for kk=1:NumOfEpochs
     %[nodes, edges, ages, fixed_nodes, node_classes] = removeUnconnectedF(nodes, edges,ages,fixed_nodes,node_classes);
     %%
     end
+    n = 1;
     %hold on;
-    plotArray = [plotArray [NumOfNodes; sum(fixed_nodes>0)]];
+    plotArray = [plotArray [NumOfNodes; sum(fgng.fixed_nodes>0)]];
     %plot(0:ecount, plotArray(1,:), 0:ecount, plotArray(2,:));
     plot(0:ecount, 1-plotArray(2,:)./plotArray(1,:));
     drawnow;
@@ -295,40 +301,46 @@ for kk=1:NumOfEpochs
 %         RMSE = RMSE(end-100:end);
 %     end
 % 
-%     Epoch = [Epoch kk];
-%     if length(Epoch)>100
-%         Epoch = Epoch(end-100:end);
-%     end
+    Epoch = [Epoch ecount];
+    if length(Epoch)>100
+        Epoch = Epoch(end-100:end);
+    end
 
       %% Plot everything
-%      subplot(1,2,1);
-%      plotgng(nodes,edges,'n');
-%      % xlim([-1/2 2.5]);
-%      % ylim([-1 8]);
-%      % zlim([-1/2 1.5]);
-%      % xlim([-1 6]);
-%      % ylim([-1 6]);
-%      % zlim([-7 7]);
-%      drawnow;
+     subplot(1,2,1);
+     hold on
+     scatter(Data(1,:),Data(2,:),8,'y');
+     %scatter3(Data(1,:),Data(2,:),Data(3,:),8,'y');
+     plotgng2015(fgng.nodes,fgng.edges,'n',fgng.fixed_nodes);
+     %viscircles(fgng.nodes',fgng.node_lambdas,'EdgeColor','r','LineWidth',1);
+     hold off
+     % xlim([-1/2 2.5]);
+     % ylim([-1 8]);
+     % zlim([-1/2 1.5]);
+     % xlim([-1 6]);
+     % ylim([-1 6]);
+     % zlim([-7 7]);
+     drawnow;
 %  
-%      subplot(2,2,2);
+      subplot(2,2,2);
+      plot(1:ecount, 1-plotArray(2,2:end)./plotArray(1,2:end));
 %      plot(Epoch,0,'r.');
-%      title('RMS err');
+      title('Free nodes proportion');
 %      if kk>100
 %           xlim([Epoch(1) Epoch(end)]);
 %      end
-%      xlabel('Training Epoch Number');
-%      grid on;
+      xlabel('Training Epoch Number');
+      grid on;
 %  
-%      subplot(2,2,4);
-%      plot(Epoch,Cur_NumOfNodes,'g.');
-%      title('Number of Neural Units in the Growing Neural Gas');
-%      if kk>100
-%        xlim([Epoch(1) Epoch(end)]);
-%      end
-%      xlabel('Training Epoch Number');
-%      grid on;
-%      M(kk)=getframe(gcf);
+     subplot(2,2,4);
+     plot(Epoch,Cur_NumOfNodes,'g.');
+     title('Number of Neural Units in the Growing Neural Gas');
+     if kk>100
+       xlim([Epoch(1) Epoch(end)]);
+     end
+     xlabel('Training Epoch Number');
+     grid on;
+     M(kk)=getframe(gcf);
 end
 
 %     %% Merging epoch
@@ -399,7 +411,7 @@ end
 %     end           
    
     %% Check convergence
-    if size(nodes,2)>= NumOfEpochs*NumOfSamples
+    if size(fgng.nodes,2)>= NumOfEpochs*NumOfSamples
         disp(lambda);
         error('Neural gas did not converge!');
     end
