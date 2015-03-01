@@ -64,8 +64,8 @@ NumOfNodes = 2;
 % nodes = [Data(:,1)  Data(:,SecondNodeIndex)];
 fgng.nodes = [Data(:,1)  Data(:,2)];
 %classfreqs = [zeros(NumOfClasses,1) zeros(NumOfClasses,1)];
-%lambda = 2;
-lambda = norm(fgng.nodes(1)-fgng.nodes(2))/2;
+lambda = 2;
+%lambda = norm(fgng.nodes(1)-fgng.nodes(2))/2;
 fgng.node_lambdas = [lambda lambda];
 fgng.point_coverages = [1 1];
 fgng.node_classes = [-1 -1];
@@ -91,6 +91,7 @@ Epoch = 0;
 ecount = 0;
 plotArray = [2; 0]; %prev point for node count graph
 tic
+n = 3;
 while ~all(fgng.fixed_nodes)
     ecount = ecount+1;
 %     if toc>90
@@ -108,9 +109,9 @@ for kk=1:NumOfEpochs
     
     %set initial lambda
 
-    for n=3:NumOfSamples
+    for n=n:NumOfSamples
 
-    % Step.1 Generate an input signal î according to P(î).
+    % Step.1 Generate an input signal ï¿½ according to P(ï¿½).
     params(9) = n;
     Input = In(:,n);
 
@@ -131,7 +132,7 @@ for kk=1:NumOfEpochs
     % Step 4. Add the squared distance to a local error counter variable:
     %error(s1) = error(s1) + distances(s1)^2;
 
-    % Step 5. Move s1 and its topological neighbors towards î.
+    % Step 5. Move s1 and its topological neighbors towards ï¿½.
     ndist = norm(fgng.nodes(:,s1)-Input);
     if fgng.fixed_nodes(1,s1) == 1
         if ndist > fgng.node_lambdas(1, s1)
@@ -240,6 +241,7 @@ for kk=1:NumOfEpochs
     %[nodes, edges, ages, fixed_nodes, node_classes] = removeUnconnectedF(nodes, edges,ages,fixed_nodes,node_classes);
     %%
     end
+    n = 1;
     %hold on;
     plotArray = [plotArray [NumOfNodes; sum(fgng.fixed_nodes>0)]];
     %plot(0:ecount, plotArray(1,:), 0:ecount, plotArray(2,:));
@@ -268,9 +270,10 @@ for kk=1:NumOfEpochs
       %% Plot everything
      subplot(1,2,1);
      hold on
-     %scatter(Data(1,:),Data(2,:),8,'y');
-     scatter3(Data(1,:),Data(2,:),Data(3,:),8,'y');
-     plotgng(fgng.nodes,fgng.edges,'n');
+     scatter(Data(1,:),Data(2,:),8,'y');
+     %scatter3(Data(1,:),Data(2,:),Data(3,:),8,'y');
+     plotgng2015(fgng.nodes,fgng.edges,'n',fgng.fixed_nodes);
+     %viscircles(fgng.nodes',fgng.node_lambdas,'EdgeColor','r','LineWidth',1);
      hold off
      % xlim([-1/2 2.5]);
      % ylim([-1 8]);
