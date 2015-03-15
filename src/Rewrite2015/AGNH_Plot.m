@@ -10,6 +10,6 @@ function AGNH_Plot(agnh, Data, curIndex, curSample)
     scatter(curSample(:,1),curSample(:,2),12,'k');
     node_lambdas = reshape([agnh.nodes.lambda],[],1);
     viscircles(node_coords,node_lambdas,'LineWidth',1);
-    pause(2)
+    pause(1)
     hold off
 end

@@ -71,14 +71,48 @@ while converged==false
             curNode = agnh.nodes(curIndex);
         end
     end
-    if curIndex > 0
-        agnh.nodes(curIndex) = curNode;
-    else
-        agnh = curNode;
+    
+    if curIndex<0
+        agnh.NumOfNodes = agnh.NumOfNodes+1;
+        agnh.TotalNodes = agnh.TotalNodes+1;
+        agnh.nodes = [agnh.nodes AGNH_NewNode(curSample, min(sqrt(sqdists)))];
+        agnh.next_layer = [agnh.next_layer agnh.TotalNodes];
+        continue;
     end
+    
+    curSampleDist = sqrt(sum((curSample-curNode.coord).^2));
     if size(Data,2) == 2 || size(Data,2) == 3
         AGNH_Plot(agnh, Data, curIndex, curSample);
     end
+    
+    % if there are no buffers
+    if isempty(curNode.buffer)
+        % if sample is farther than half lambda
+        % assign it to the new buffer
+        if curSampleDist>curNode.lambda/2
+            tmp.points = curSample;
+            tmp.mean = curSample;
+            tmp.std = 0;
+            curNode.buffer = [curNode.buffer tmp]; 
+        end
+    else
+    % check the distance to all the buffers (including the node itself)
+        buffDists = zeros(1,length(curNode.buffer));
+        for k = 1:length(curNode.buffer)
+            buffDists(k) = sqrt(sum((curSample-curNode.buffer(k).mean).^2));
+        end
+        if any(buffDists<curSampleDist)
+            [foo buffIndex] = min(buffDists);
+        else
+            buffIndex = -1;
+        end
+        if buffIndex>0
+            curNode.buffer(buffIndex).points = [curNode.buffer(buffIndex).points; curSample];
+            curNode.buffer(buffIndex).mean = mean(curNode.buffer(buffIndex).points);
+            curNode.buffer(buffIndex).std = std(curNode.buffer(buffIndex).points);
+        end
+    end
+    agnh.nodes(curIndex) = curNode;
  end
  % reset sample counter
  n = 1;
