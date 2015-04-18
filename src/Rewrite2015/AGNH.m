@@ -33,9 +33,11 @@ agnh.buffer = [];
 
 n = 3;
 converged = false;
+iterCount = 0;
 
 % epochs loop
 while converged==false
+ iterCount = iterCount+1;   
  % samples loop   
  for n=n:size(Data,1)
     curSample = Data(n,:);
@@ -54,7 +56,7 @@ while converged==false
                 sqdists(i) = sum((agnh.nodes(k).coord - curSample).^2);
                 i = i+1;
             end
-            nodes_containing = sqrt(sqdists)<=[agnh.nodes.('lambda')];
+            nodes_containing = sqrt(sqdists)<=[agnh.nodes(curNode.next_layer).('lambda')];
         end
         
         if any(nodes_containing) == false
@@ -62,7 +64,7 @@ while converged==false
             done = true;
         elseif sum(nodes_containing)>1
             % if more than one winning node, choose closest one
-            [M, I] = min(sqdists);
+            [~, I] = min(sqdists);
             curIndex = curNode.next_layer(I);
             curNode = agnh.nodes(curIndex);
         else
@@ -81,9 +83,9 @@ while converged==false
     end
     
     curSampleDist = sqrt(sum((curSample-curNode.coord).^2));
-    if size(Data,2) == 2 || size(Data,2) == 3
-        AGNH_Plot(agnh, Data, curIndex, curSample);
-    end
+    %if size(Data,2) == 2 || size(Data,2) == 3
+    %    AGNH_Plot(agnh, Data, curIndex, curSample);
+    %end
     
     % if there are no buffers
     if isempty(curNode.buffer)
@@ -93,7 +95,12 @@ while converged==false
             tmp.points = curSample;
             tmp.mean = curSample;
             tmp.std = 0;
-            curNode.buffer = [curNode.buffer tmp]; 
+            curNode.buffer = [curNode.buffer tmp];
+        % else update the actual used area if necessary
+        else
+            if isempty(curNode.maxdist) || (curNode.maxdist<curSampleDist)
+                curNode.maxdist = curSampleDist;
+            end
         end
     else
     % check the distance to all the buffers (including the node itself)
@@ -101,8 +108,14 @@ while converged==false
         for k = 1:length(curNode.buffer)
             buffDists(k) = sqrt(sum((curSample-curNode.buffer(k).mean).^2));
         end
-        if any(buffDists<curSampleDist)
-            [foo buffIndex] = min(buffDists);
+        if curSampleDist>curNode.lambda/2 && all(buffDists>curNode.lambda/2)
+            tmp.points = curSample;
+            tmp.mean = curSample;
+            tmp.std = 0;
+            curNode.buffer = [curNode.buffer tmp];
+            buffIndex = -1;
+        elseif any(buffDists<curSampleDist)
+            [~, buffIndex] = min(buffDists);
         else
             buffIndex = -1;
         end
@@ -117,8 +130,47 @@ while converged==false
  % reset sample counter
  n = 1;
  %do stuff at the end of epoch
+ 
+ %iterate through all the nodes
+ for k=1:length(agnh.nodes)
+     %if there are no buffers, shrink the lambda or fix the node if
+     %shrinking not necessary
+     if isempty(agnh.nodes(k).buffer)
+         if ~isempty(agnh.nodes(k).next_layer)
+             agnh.nodes(k).fixed = true;
+             continue
+         end
+         if ~isempty(agnh.nodes(k).maxdist) && (agnh.nodes(k).lambda>agnh.nodes(k).maxdist)
+            agnh.nodes(k).lambda = agnh.nodes(k).maxdist;
+         else
+            agnh.nodes(k).fixed = true;
+         end
+     %else iterate over buffers and make new nodes out of them    
+     else
+        for l=1:length(agnh.nodes(k).buffer)
+            agnh.TotalNodes = agnh.TotalNodes+1;
+            agnh.nodes = [agnh.nodes AGNH_NewNode(agnh.nodes(k).buffer(l).mean, 2*max(agnh.nodes(k).buffer(l).std))];
+            agnh.nodes(k).next_layer = [agnh.nodes(k).next_layer agnh.TotalNodes];
+        end
+        agnh.nodes(k).buffer = [];
+     end
+ end
+ 
+ fixedCount = sum([agnh.nodes.('fixed')])
+ agnh.TotalNodes
+ currentRatio = sum([agnh.nodes.('fixed')])/agnh.TotalNodes
+ if all([agnh.nodes.('fixed')])
+     converged = true;
+     iterCount
+ end
+ %TODO
+ 
+ %shrink existing lambdas until possible
+ %if not possible to shrink - fix it
+ % if all fixed - end algorithm
 end
 
+return
 %ClassIdents = unique(classLabels);node
 %NumOfClasses = numel(ClassIdents);
 % SecondNodeIndex = find(classLabels~=classLabels(1,1),1);
