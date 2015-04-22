@@ -13,6 +13,6 @@ function AGNH_Plot(agnh, Data, curIndex, curSample)
         size(node_coords)
     end
     viscircles(node_coords,node_lambdas,'LineWidth',1);
-    %pause(1)
+    pause(0.2)
     hold off
 end

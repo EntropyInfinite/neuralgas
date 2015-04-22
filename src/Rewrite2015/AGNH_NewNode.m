@@ -5,6 +5,7 @@ function newNode = AGNH_NewNode( nodeCoords, lambda )
     newNode.buffer = [];
     newNode.maxdist = [];
     newNode.fixed = false;
+    newNode.deleted = false;
     
 end
 
