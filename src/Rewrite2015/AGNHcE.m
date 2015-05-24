@@ -1,4 +1,4 @@
-function agnh = AGNH( Data, classLabels, NumOfSamples)
+function agnh = AGNHcE( Data, classLabels, NumOfSamples)
 %AGNH structure creation: provides AGNH in a struct
 
 % Check label data
@@ -15,22 +15,31 @@ if NumOfSamples > size(Data, 1)
     error('Not enough data provided!');
 end
 
-Dims = size(Data, 2);
+convergeLimit = 5;
+convergeCounter = 0;
+lastRatio = 0;
+classIndex = unique(classLabels)
+classCount = length(classIndex)
 
 close all;
 colordef white
 pause on
 
 % Step.0 Start with the root
-DSample = datasample(Data,size(Data,1),'Replace',false);
+inds = randperm(size(Data,1));
+DSample = Data(inds,:);
+CL = classLabels(inds);
 agnh.NumOfNodes = 2;
 agnh.ActualNodes = 2;
 agnh.TotalNodes = 2;
+agnh.Classes = classIndex;
 %agnh.nodes(1) = AGNH_NewNode(Data(1,:), sqrt(sum((Data(1,:)-Data(2,:)).^2)));
 %agnh.nodes(2) = AGNH_NewNode(Data(2,:), sqrt(sum((Data(1,:)-Data(2,:)).^2)));
 
-agnh.nodes(1) = AGNH_NewNode(DSample(1,:), sqrt(sum((DSample(1,:)-DSample(2,:)).^2)));
-agnh.nodes(2) = AGNH_NewNode(DSample(2,:), sqrt(sum((DSample(1,:)-DSample(2,:)).^2)));
+agnh.nodes(1) = AGNHc_NewNode(DSample(1,:), sqrt(sum((DSample(1,:)-DSample(2,:)).^2)), classCount);
+agnh.nodes(2) = AGNHc_NewNode(DSample(2,:), sqrt(sum((DSample(1,:)-DSample(2,:)).^2)), classCount);
+agnh.nodes(1).classcount(classIndex==CL(1)) = 1;
+agnh.nodes(2).classcount(classIndex==CL(2)) = 1;
 % agnh.nodes(1).coord = Data(1,:);
 % agnh.nodes(2).coord = Data(2,:);
 % agnh.nodes(1).lambda = Inf;
@@ -49,6 +58,7 @@ while converged==false
  % samples loop   
  for n=n:size(Data,1)
     curSample = DSample(n,:);
+    curClass = CL(n);
     curNode = agnh;
     curIndex = -1;
     done = false;
@@ -102,9 +112,10 @@ while converged==false
         agnh.NumOfNodes = agnh.NumOfNodes+1;
         agnh.TotalNodes = agnh.TotalNodes+1;
         agnh.ActualNodes = agnh.ActualNodes+1;
-        agnh.nodes = [agnh.nodes AGNH_NewNode(curSample, 1.01*min(sqrt(sqdists)))];
+        agnh.nodes = [agnh.nodes AGNHc_NewNode(curSample, 1.01*min(sqrt(sqdists)), classCount)];
         agnh.next_layer = [agnh.next_layer agnh.TotalNodes];
         agnh.nodes(end).maxdist = min(sqrt(sqdists));
+        agnh.nodes(end).classcount(classIndex==curClass) = 1;
         continue;
     end
     
@@ -151,6 +162,7 @@ while converged==false
             curNode.buffer(buffIndex).std = std(curNode.buffer(buffIndex).points);
         end
     end
+    curNode.classcount(classIndex==curClass) = curNode.classcount(classIndex==curClass)+1;
     agnh.nodes(curIndex) = curNode;
  end
  % reset sample counter
@@ -184,7 +196,16 @@ while converged==false
         for l=1:length(agnh.nodes(k).buffer)
             agnh.TotalNodes = agnh.TotalNodes+1;
             agnh.ActualNodes = agnh.ActualNodes+1;
-            agnh.nodes = [agnh.nodes AGNH_NewNode(agnh.nodes(k).buffer(l).mean, 2*max(agnh.nodes(k).buffer(l).std))];
+            buffDists = zeros(1,size(agnh.nodes(k).buffer(l).points,1));
+            for m = 1:length(buffDists)
+                buffDists(m) = sqrt(sum((agnh.nodes(k).buffer(l).points(m,:)-agnh.nodes(k).buffer(l).mean).^2));
+            end
+            if max(buffDists)==0
+                lambdaval = sqrt(sum((agnh.nodes(k).coord-agnh.nodes(k).buffer(l).mean).^2))-agnh.nodes(k).lambda/2;
+            else
+                lambdaval = max(buffDists);
+            end
+            agnh.nodes = [agnh.nodes AGNHc_NewNode(agnh.nodes(k).buffer(l).mean, lambdaval,classCount)];
             agnh.nodes(k).next_layer = [agnh.nodes(k).next_layer agnh.TotalNodes];
         end
         agnh.nodes(k).buffer = [];
@@ -212,12 +233,28 @@ while converged==false
  if all([agnh.nodes(~[agnh.nodes.deleted]).('fixed')])
      converged = true;
      iterCount
+     continue;
  end
- %TODO
  
- %shrink existing lambdas until possible
- %if not possible to shrink - fix it
- % if all fixed - end algorithm
+ currentRatio = sum([agnh.nodes(~[agnh.nodes.deleted]).('fixed')])/agnh.ActualNodes;
+ if currentRatio~=lastRatio
+     convergeCounter = 0;
+     lastRatio = currentRatio;
+ else
+     convergeCounter = convergeCounter+1;
+     if convergeCounter==convergeLimit
+        disp('Convergence not reached, stopping')
+        converged = true;
+        iterCount
+        continue;
+     end
+     lastRatio = currentRatio;
+ end
+ 
+  for k=1:length(agnh.nodes)
+     %reset class counters
+     agnh.nodes(k).classcount = zeros(1, classCount);
+  end
 end
 
 return
